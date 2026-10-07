@@ -1,0 +1,64 @@
+#include <stdio.h>
+
+#include <stdlib.h>
+#include <string.h>
+
+int next_permutation(int n, char **s)
+{
+	// Step 1: Find the longest non-increasing suffix from the right
+    int i = n - 2;
+    while (i >= 0 && strcmp(s[i], s[i + 1]) >= 0) {
+        i--;
+    }
+    
+    // If no such element is found, this is the last permutation
+    if (i < 0) {
+        return 0;
+    }
+    
+    // Step 2: Find the rightmost element in the suffix greater than the pivot
+    int j = n - 1;
+    while (strcmp(s[j], s[i]) <= 0) {
+        j--;
+    }
+    
+    // Step 3: Swap the pivot and the successor
+    char *tmp = s[i];
+    s[i] = s[j];
+    s[j] = tmp;
+    
+    // Step 4: Reverse the suffix elements after the pivot position
+    int left = i + 1;
+    int right = n - 1;
+    while (left < right) {
+        tmp = s[left];
+        s[left] = s[right];
+        s[right] = tmp;
+        left++;
+        right--;
+    }
+    
+    return 1; // Successfully moved to the next permutation
+}
+
+int main()
+{
+	char **s;
+	int n;
+	scanf("%d", &n);
+	s = calloc(n, sizeof(char*));
+	for (int i = 0; i < n; i++)
+	{
+		s[i] = calloc(11, sizeof(char));
+		scanf("%s", s[i]);
+	}
+	do
+	{
+		for (int i = 0; i < n; i++)
+			printf("%s%c", s[i], i == n - 1 ? '\n' : ' ');
+	} while (next_permutation(n, s));
+	for (int i = 0; i < n; i++)
+		free(s[i]);
+	free(s);
+	return 0;
+}
