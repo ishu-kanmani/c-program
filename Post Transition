@@ -1,0 +1,162 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_STRING_LENGTH 6
+
+struct package {
+    char* id;
+    int weight;
+};
+
+typedef struct package package;
+
+struct post_office {
+    int min_weight;
+    int max_weight;
+    package* packages;
+    int packages_count;
+};
+
+typedef struct post_office post_office;
+
+struct town {
+    char* name;
+    post_office* offices;
+    int offices_count;
+};
+
+typedef struct town town;
+
+// 1. Prints packages exactly as required by HackerRank's checker format
+void print_all_packages(town t) {
+    printf("%s:\n", t.name);
+    for (int i = 0; i < t.offices_count; i++) {
+        printf("\t%d:\n", i);
+        for (int j = 0; j < t.offices[i].packages_count; j++) {
+            printf("\t\t%s\n", t.offices[i].packages[j].id);
+        }
+    }
+}
+
+// 2. Safely transfers acceptable packages using temporary arrays to avoid realloc bugs
+void send_all_acceptable_packages(town* source, int source_office_index, town* target, int target_office_index) {
+    post_office* src_office = &(source->offices[source_office_index]);
+    post_office* tgt_office = &(target->offices[target_office_index]);
+    
+    // Allocate max potential size buffers to separate packages
+    package* accepted = malloc(sizeof(package) * (src_office->packages_count + tgt_office->packages_count));
+    package* rejected = malloc(sizeof(package) * src_office->packages_count);
+    
+    int accepted_count = 0;
+    // Copy existing target packages first
+    for (int i = 0; i < tgt_office->packages_count; i++) {
+        accepted[accepted_count++] = tgt_office->packages[i];
+    }
+    
+    int rejected_count = 0;
+    // Filter source packages based on weight constraints
+    for (int i = 0; i < src_office->packages_count; i++) {
+        int w = src_office->packages[i].weight;
+        if (w >= tgt_office->min_weight && w <= tgt_office->max_weight) {
+            accepted[accepted_count++] = src_office->packages[i];
+        } else {
+            rejected[rejected_count++] = src_office->packages[i];
+        }
+    }
+    
+    // Free old dynamically allocated buffers
+    free(src_office->packages);
+    free(tgt_office->packages);
+    
+    // Assign updated buffers back to target office
+    if (accepted_count > 0) {
+        tgt_office->packages = realloc(accepted, sizeof(package) * accepted_count);
+    } else {
+        free(accepted);
+        tgt_office->packages = NULL;
+    }
+    tgt_office->packages_count = accepted_count;
+    
+    // Assign updated buffers back to source office
+    if (rejected_count > 0) {
+        src_office->packages = realloc(rejected, sizeof(package) * rejected_count);
+    } else {
+        free(rejected);
+        src_office->packages = NULL;
+    }
+    src_office->packages_count = rejected_count;
+}
+
+// 3. Returns the town with the most packages (breaks ties with the first town found)
+town town_with_most_packages(town* towns, int towns_count) {
+    int max_packages = -1;
+    int max_town_index = 0;
+    
+    for (int i = 0; i < towns_count; i++) {
+        int current_town_packages = 0;
+        for (int j = 0; j < towns[i].offices_count; j++) {
+            current_town_packages += towns[i].offices[j].packages_count;
+        }
+        if (current_town_packages > max_packages) {
+            max_packages = current_town_packages;
+            max_town_index = i;
+        }
+    }
+    return towns[max_town_index];
+}
+
+// 4. Looks up a town structure by its unique string name
+town* find_town(town* towns, int towns_count, char* name) {
+    for (int i = 0; i < towns_count; i++) {
+        if (strcmp(towns[i].name, name) == 0) {
+            return &towns[i];
+        }
+    }
+    return NULL;
+}
+
+int main() {
+    int towns_count;
+    if (scanf("%d", &towns_count) != 1) return 0;
+    town* towns = malloc(sizeof(town) * towns_count);
+    for (int i = 0; i < towns_count; i++) {
+        towns[i].name = malloc(sizeof(char) * MAX_STRING_LENGTH);
+        if (scanf("%s", towns[i].name) != 1) return 0;
+        if (scanf("%d", &towns[i].offices_count) != 1) return 0;
+        towns[i].offices = malloc(sizeof(post_office) * towns[i].offices_count);
+        for (int j = 0; j < towns[i].offices_count; j++) {
+            // Note the correct order of variables matching the standard HackerRank input format
+            if (scanf("%d%d%d", &towns[i].offices[j].packages_count, &towns[i].offices[j].min_weight, &towns[i].offices[j].max_weight) != 3) return 0;
+            towns[i].offices[j].packages = malloc(sizeof(package) * towns[i].offices[j].packages_count);
+            for (int k = 0; k < towns[i].offices[j].packages_count; k++) {
+                towns[i].offices[j].packages[k].id = malloc(sizeof(char) * MAX_STRING_LENGTH);
+                if (scanf("%s", towns[i].offices[j].packages[k].id) != 1) return 0;
+                if (scanf("%d", &towns[i].offices[j].packages[k].weight) != 1) return 0;
+            }
+        }
+    }
+    int queries;
+    if (scanf("%d", &queries) != 1) return 0;
+    while (queries--) {
+        int type;
+        if (scanf("%d", &type) != 1) return 0;
+        if (type == 1) {
+            char name[MAX_STRING_LENGTH];
+            if (scanf("%s", name) != 1) return 0;
+            town* t = find_town(towns, towns_count, name);
+            print_all_packages(*t);
+        } else if (type == 2) {
+            char source_name[MAX_STRING_LENGTH], target_name[MAX_STRING_LENGTH];
+            int source_office_index, target_office_index;
+            if (scanf("%s%d%s%d", source_name, &source_office_index, target_name, &target_office_index) != 4) return 0;
+            town* source = find_town(towns, towns_count, source_name);
+            town* target = find_town(towns, towns_count, target_name);
+            send_all_acceptable_packages(source, source_office_index, target, target_office_index);
+        } else if (type == 3) {
+            town t = town_with_most_packages(towns, towns_count);
+            printf("Town with the most number of packages is %s\n", t.name);
+        }
+    }
+    return 0;
+}
