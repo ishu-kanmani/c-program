@@ -1,0 +1,35 @@
+#include <stdio.h>
+#include <stdlib.h> 
+
+int min_of_four(int a, int b, int c, int d) {
+    int min1 = (a < b) ? a : b;
+    int min2 = (c < d) ? c : d;
+    return (min1 < min2) ? min1 : min2;
+}
+
+void print_pattern(int n) {
+    int size = 2 * n - 1;
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+        
+            int distance_from_top = i;
+            int distance_from_bottom = size - 1 - i;
+            int distance_from_left = j;
+            int distance_from_right = size - 1 - j;
+            
+           
+            int value = n - min_of_four(distance_from_top, distance_from_bottom, distance_from_left, distance_from_right);
+            
+            printf("%d ", value);
+        }
+        printf("\n");
+    }
+}
+
+int main() {
+    int n;
+    scanf("%d", &n);
+    print_pattern(n);
+    return 0;
+}
+
